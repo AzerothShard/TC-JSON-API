@@ -4,7 +4,7 @@
 
 Route::get('/achievement', function() {
 
-  $query = DB::connection('achievement')->table('achievement');
+  $query = DB::connection('dbc')->table('achievement');
 
   if (!isset($_GET['no_extra_fields']))
     $query->select('ID', 'Faction', 'Map', 'Name', 'Description', 'Category', 'Points', 'Flags', 'SpellIcon', 'icon');
@@ -28,7 +28,7 @@ Route::get('/achievement', function() {
 
 Route::get('/achievement_category', function() {
 
-  $query = DB::connection('achievement')->table('achievementcategory');
+  $query = DB::connection('dbc')->table('achievementCategory');
 
   if (isset($_GET['no_extra_fields']) && $_GET['no_extra_fields'] != "" && $_GET['no_extra_fields'] == 0)
     $query->select('*');
@@ -1575,30 +1575,31 @@ Route::get('/arena_team_member/{arenaTeamId}', function($arenaTeamId) {
 
 /* Achievements */
 
-Route::get('/character_achievement/{guid}', function($guid) {
-
-  $query = DB::connection('characters')->table('character_achievement');
-  $query->where('guid', '=', $guid);
-
-  $results = $query->get();
-
-  if (isset($_GET['category']) && $_GET['category'] != "") {
-    $results = $query->get();
-
-    $ids = "";
-    for ($i = 0; $i < count($results); $i++)
-      $ids .= $results[$i]->{'achievement'} . ",";
-
-    $ids = substr($ids, 0, strlen($ids)-1);
-
-    $results = DB::connection('achievement')->select("SELECT ID, Name, Description, Category, Points, icon FROM achievement WHERE ID IN (" . $ids . ") AND category = " . $_GET['category']);
-  }
-
+Route::get('/character_achievement', function() {
+  $results = DB::select('SELECT cha.guid, SUM(Points) AS Points, ch.account, ch.name, ch.level, ch.race, ch.class, ch.gender
+    FROM ' . env('DB_CHARACTERS') . '.character_achievement cha
+    JOIN ' . env('DB_DBC') . '.achievement AS ac ON cha.achievement = ac.ID
+    JOIN ' . env('DB_CHARACTERS') . '.characters AS ch ON cha.guid = ch.guid
+    GROUP BY (cha.guid)
+    ORDER BY SUM(Points) DESC');
   return Response::json($results);
+});
+
+Route::get('/character_achievement/{guid}', function($guid) {
+  if (isset($_GET['category']) && $_GET['category'] != "") {
+    $result = DB::select("SELECT ID, Name, Description, Category, Points, icon FROM " . env('DB_DBC') . ".achievement WHERE ID IN (SELECT achievement FROM " . env('DB_CHARACTERS') . ".character_achievement WHERE guid = " . $guid . ") AND category = " . $_GET['category']);
+  } else {
+    $query = DB::connection('characters')->table('character_achievement');
+    $query->where('guid', '=', $guid);
+    $result = $query->get();
+  }
+  return Response::json($result);
 })
   ->where('guid', '[0-9]+');
 
 Route::get('/achievement_progress', function() {
+
+  $result = array("error" => "please insert at least one parameter");
 
   if (isset($_GET['from']) && $_GET['from'] != "")
     $from = $_GET['from'];
@@ -1610,46 +1611,29 @@ Route::get('/achievement_progress', function() {
   else
     $to = 20;
 
-  if (isset($_GET['guid']) && $_GET['guid'] != "")
-  {
-    $result = DB::select('SELECT ac.guid, ac.criteria, ac.counter, ac.date, c.account, c.name, c.level, c.race, c.class, c.gender
-FROM ' . env('DB_CHARACTERS') . '.character_achievement_progress AS ac
-JOIN ' . env('DB_CHARACTERS') . '.characters AS c ON ac.guid = c.guid
-WHERE ac.guid = ' . $_GET['guid']);
-
-    $ids = "";
-    for ($i = 0; $i < count($result); $i++)
-      $ids .= $result[$i]->{'criteria'} . ",";
-
-    $ids = substr($ids, 0, strlen($ids)-1);
-
-    $ach = DB::connection('achievement')->select("SELECT acc.ID AS criteria, Achievement AS ID, aca.ID as CategoryID, aca.parentID, aca.Name as Category, aca2.Name as ParentCategory, ac.Name, ac.Description, acc.Description, Faction, Map, icon
-FROM achievementcriteria as acc
-JOIN achievement AS ac ON acc.Achievement = ac.ID
-JOIN achievementcategory AS aca ON ac.category = aca.ID
-JOIN achievementcategory AS aca2 ON aca.ParentID= aca2.ID
-WHERE acc.ID IN (" . $ids . ") LIMIT 50");
-
-    $result = $ach;
+  if (isset($_GET['guid']) && $_GET['guid'] != "" && isset($_GET['category']) && $_GET['category'] != "") {
+    $result = DB::select("SELECT ach.ID AS ID, acc.ID AS criteria, counter, ach.Name, ach.Description, ach.Points, ach.Category, ach.icon, acc.Quantity
+	FROM " . env('DB_CHARACTERS') . ".character_achievement_progress as ach_progress
+	JOIN " . env('DB_DBC') . ".achievementCriteria AS acc ON ach_progress.criteria = acc.ID
+	JOIN " . env('DB_DBC') . ".achievement AS ach ON ach.ID = acc.Achievement
+	WHERE ach.category=" . $_GET['category'] . " AND guid=" . $_GET['guid']);
   }
-  else
-  {
-
-    /* Underworking */    
-    /*
-$result = DB::select('SELECT ac.guid, ac.criteria, SUM(ac.counter) AS counter, ac.date, c.account, c.name, c.level, c.race, c.class, c.gender
-FROM ' . env('DB_CHARACTERS') . '.character_achievement_progress AS ac
-JOIN ' . env('DB_CHARACTERS') . '.characters AS c ON ac.guid = c.guid
-WHERE c.account NOT IN
-(SELECT id FROM ' . env('DB_AUTH') . '.account_access WHERE gmlevel > 0)
-LIMIT ' . $from . ' , ' . $to);
-*/
-
+  else if (isset($_GET['guid']) && $_GET['guid'] != "") {
+    $result = DB::select("SELECT acc.ID AS criteria, Achievement AS ID, aca.ID as CategoryID, aca.parentID, aca.Name as Category, aca2.Name as ParentCategory, ac.Name, ac.Description, acc.Description, Faction, Map, icon
+	FROM " . env('DB_DBC') . ".achievementCriteria as acc
+	JOIN " . env('DB_DBC') . ".achievement AS ac ON acc.Achievement = ac.ID
+	JOIN " . env('DB_DBC') . ".achievementCategory AS aca ON ac.category = aca.ID
+	JOIN " . env('DB_DBC') . ".achievementCategory AS aca2 ON aca.ParentID= aca2.ID
+	WHERE acc.ID IN (
+		SELECT ac.criteria
+		FROM " . env('DB_CHARACTERS') . ".character_achievement_progress AS ac
+		JOIN " . env('DB_CHARACTERS') . ".characters AS c ON ac.guid = c.guid
+		WHERE ac.guid = " . $_GET['guid'] . "
+	)");
   }
 
   return Response::json($result);
 });
-
 
 
 /* Auth */

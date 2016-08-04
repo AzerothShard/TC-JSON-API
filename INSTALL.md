@@ -63,6 +63,8 @@ if you don't have [git](http://git-scm.com/) installed, you can [download it dir
 
 ## 2) Configure the API
 
+- Create a new database that will contain all **dbc** data and import the file achievements.sql (in storage/database/achievements.sql) which contains all the dbc data of achievements.
+
 - Open **.env** with a text editor and set properly DB_* parameters, example:
 
 `DB_HOST=localhost`
@@ -72,6 +74,8 @@ if you don't have [git](http://git-scm.com/) installed, you can [download it dir
 `DB_CHARACTERS=characters`
 
 `DB_AUTH=auth`
+
+`DB_DBC=dbc`
 
 `DB_USERNAME=root`
 
