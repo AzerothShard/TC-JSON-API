@@ -1414,7 +1414,7 @@ Route::get('/auction', function() {
     FROM ' . env('DB_CHARACTERS') . '.auctionhouse AS ah
     LEFT JOIN ' . env('DB_CHARACTERS') . '.item_instance AS ins ON ah.itemguid = ins.guid
     LEFT JOIN ' . env('DB_CHARACTERS') . '.characters AS c ON ah.itemowner = c.guid
-    LEFT JOIN ' . env('DB_CHARACTERS') . '.characters AS c2 ON ah.buyguid = c2.guid LIMIT ' . $itemFrom . ' , ' . $numItem);    
+    LEFT JOIN ' . env('DB_CHARACTERS') . '.characters AS c2 ON ah.buyguid = c2.guid LIMIT ' . $itemFrom . ' , ' . $numItem);
   }
   else
   {
@@ -1576,12 +1576,95 @@ Route::get('/arena_team_member/{arenaTeamId}', function($arenaTeamId) {
 /* Achievements */
 
 Route::get('/character_achievement', function() {
+  /*
   $results = DB::select('SELECT cha.guid, SUM(Points) AS Points, ch.account, ch.name, ch.level, ch.race, ch.class, ch.gender
     FROM ' . env('DB_CHARACTERS') . '.character_achievement cha
     JOIN ' . env('DB_DBC') . '.achievement AS ac ON cha.achievement = ac.ID
     JOIN ' . env('DB_CHARACTERS') . '.characters AS ch ON cha.guid = ch.guid
     GROUP BY (cha.guid)
     ORDER BY SUM(Points) DESC');
+  */
+
+  /* [AZTH] */
+
+  /* Configuration */
+  $custom_database = env('DB_CHARACTERS'); //database where is azth_achievement_stats
+  $criteria = false; // if add 1 point per criteria or ignore the single criteria achievements
+
+  $riduttore = 1;
+  $achievement_multiplier = 1;
+
+  $limit = 50; // players number to show in the ranking list
+
+  $results = DB::select('SELECT playerGuid AS guid, SUM(Points) AS Points, ch.account, ch.name, ch.level, ch.race, ch.class, ch.gender
+    FROM (
+      (SELECT id, playerGuid, SUM(formula) AS Points
+        FROM
+          (SELECT st.id, st.playerGuid, st.type, st.level, st.levelParty, ach.Points, ach.Category, cat.ParentID,
+
+          	/* formula */
+          	ROUND((((80 -
+          	  (  /* category with levelParty */
+          		CASE
+          		  /* "Dungeon and Raid" category and the child categories of this one */
+          		  WHEN cat.ID = 168 THEN st.levelParty
+          		  WHEN cat.ID = 14807 THEN st.levelParty
+          		  WHEN cat.ParentID = 168 THEN st.levelParty
+          		  WHEN cat.ParentID = 14807 THEN st.levelParty
+          		  ELSE st.level
+          		END
+          	   )
+          	) + 1) / ' . $riduttore . '))
+          	* (CASE WHEN (Points = 0) THEN 1 ELSE Points END)
+            * ' . $achievement_multiplier . '
+          	AS formula
+
+          FROM ' . $custom_database . '.azth_achievement_stats AS st
+          JOIN ' . env('DB_DBC') . '.achievement AS ach ON st.achievement = ach.id
+          JOIN ' . env('DB_DBC') . '.achievementCategory AS cat ON ach.Category = cat.ID
+          WHERE st.type = 0
+          ) AS pve_stats
+        GROUP BY (playerGuid)
+      )
+      UNION
+      (
+        SELECT id, playerGuid, SUM(formula) AS Points
+        FROM
+        (SELECT st.id, st.playerGuid, st.type, st.level, st.levelParty, ach.Points, ach.Category, cat.ParentID,
+
+          /* formula */
+        	ROUND((((80 -
+        	  (  /* category with levelParty */
+        		CASE
+        		  /* "Dungeon and Raid" category and the child categories of this one */
+        		  WHEN cat.ID = 168 THEN st.levelParty
+        		  WHEN cat.ID = 14807 THEN st.levelParty
+        		  WHEN cat.ParentID = 168 THEN st.levelParty
+        		  WHEN cat.ParentID = 14807 THEN st.levelParty
+        		  ELSE st.level
+        		END
+        	   )
+        	) + 1) / ' . $riduttore . '))
+        	* (CASE WHEN (Points = 0) THEN 1 ELSE Points END)
+          * ' . $achievement_multiplier . '
+        	AS formula
+
+        FROM ' . $custom_database . '.azth_achievement_stats AS st
+        JOIN ' . env('DB_DBC') . '.achievementCriteria AS cr ON st.achievement = cr.achievement
+        JOIN ' . env('DB_DBC') . '.achievement AS ach ON cr.achievement = ach.id
+        JOIN ' . env('DB_DBC') . '.achievementCategory AS cat ON ach.Category = cat.ID
+        WHERE st.type = 1
+        ) AS pve_stats
+      GROUP BY (playerGuid)
+      )
+    ) AS pve_st
+    JOIN ' . env('DB_CHARACTERS') . '.characters AS ch ON pve_st.playerGuid = ch.guid
+    GROUP BY (playerGuid)
+    ORDER BY SUM(Points) DESC
+    LIMIT ' . $limit);
+
+  /* [/AZTH] */
+
   return Response::json($results);
 });
 
@@ -1888,4 +1971,3 @@ Route::get('ticket/recent/{count}', function($count) {
 });
 
 Route::get('/', 'WelcomeController@index');
-
