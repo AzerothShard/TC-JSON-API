@@ -270,6 +270,7 @@ Route::get('/search/gameobject', function() {
   return Response::json($results);
 });
 
+/* [AZTH] disable
 Route::get('/search/character', function() {
 
   if ( !isset($_GET['guid']) && !isset($_GET['account']) && !isset($_GET['name']) )
@@ -290,61 +291,24 @@ Route::get('/search/character', function() {
 
   return Response::json($results);
 });
+*/
 
 Route::get('/search/tickets', function() {
-
-  $query = DB::connection('characters')->table('gm_ticket');
-
-  if (isset($_GET['version']) && $_GET['version'] == 6)
+  /* [AZTH] custom */
+  if (isset($_GET['unresolved']) && $_GET['unresolved'] == env('CUSTOM_PASSWORD'))
   {
-    // TODO
-    return;
-  }
-  else
-  {
+    $query = DB::connection('characters')->table('gm_ticket');
+
     $query->join('characters AS player', 'player.guid', '=', 'gm_ticket.playerGuid');
     $query->leftJoin('characters AS assign', 'assign.guid', '=', 'gm_ticket.assignedTo');
 
-    if (isset($_GET['unresolved']) && $_GET['unresolved'] == 1)
-      $query->where('gm_ticket.closedBy', '=', 0)->where('gm_ticket.completed', '=', 0);
-
-    if (isset($_GET['online']) && $_GET['online'] != "")
-      $query->where('characters.online', '=', $_GET['online']);
-
-    if (isset($_GET['closedBy']) && $_GET['closedBy'] != "")
-      $query->where('gm_ticket.closedBy', '=', $_GET['closedBy']);
-
-    if (isset($_GET['createTime']) && $_GET['createTime'] != "")
-      $query->where('gm_ticket.createTime', '=', $_GET['createTime']);
-
-    if (isset($_GET['lastModifiedTime']) && $_GET['lastModifiedTime'] != "")
-      $query->where('gm_ticket.lastModifiedTime', '=', $_GET['lastModifiedTime']);
-
-    if (isset($_GET['id']) && $_GET['id'] != "")
-      $query->where('gm_ticket.id', 'LIKE', '%'. $_GET['id'] .'%');
-
-    if (isset($_GET['playerGuid']) && $_GET['playerGuid'] != "")
-      $query->where('gm_ticket.playerGuid', 'LIKE', '%'. $_GET['playerGuid'] .'%');
-
-    if (isset($_GET['name']) && $_GET['name'] != "")
-      $query->where('gm_ticket.name', 'LIKE', '%'. $_GET['name'] .'%');
-
-    if (isset($_GET['description']) && $_GET['description'] != "")
-      $query->where('gm_ticket.description', 'LIKE', '%'. $_GET['description'] .'%');
-
-    if (isset($_GET['assignedTo']) && $_GET['assignedTo'] != "")
-      $query->where('gm_ticket.assignedTo', 'LIKE', '%'. $_GET['assignedTo'] .'%');
-
-    if (isset($_GET['comment']) && $_GET['comment'] != "")
-      $query->where('gm_ticket.comment', 'LIKE', '%'. $_GET['comment'] .'%');
-
-    if (isset($_GET['response']) && $_GET['response'] != "")
-      $query->where('gm_ticket.response', 'LIKE', '%'. $_GET['response'] .'%');
+    $query->where('gm_ticket.closedBy', '=', 0)->where('gm_ticket.completed', '=', 0);
 
     $results = $query->select('gm_ticket.*', 'player.name AS playerCurrentName', 'player.online', 'assign.name AS assignedToName')->orderBy('gm_ticket.id')->get();
+
+    return Response::json($results);
   }
 
-  return Response::json($results);
 });
 
 Route::get('/search/smart_scripts', function() {
@@ -1029,6 +993,13 @@ Route::get('/quest/request_items/{id}', function($id) {
 })
   ->where('id', '[0-9]+');
 
+/* [AZTH] */
+Route::get('/quest/bugged/', function() {
+  $results = DB::connection('world')->select("SELECT ID,LogTitle,Minlevel,AllowableRaces FROM quest_template WHERE ID IN (SELECT ID FROM quest_bugged WHERE bugged = 1)");
+
+  return Response::json($results);
+});
+/* [/AZTH] */
 
 /* Vendors */
 
@@ -1366,6 +1337,7 @@ Route::get('/battleground/deserters/recent/{count}', function($count) {
 })
   ->where('id', '[0-9]+');
 
+/* [AZTH] disable
 Route::get('/characters/{guid}', function($guid) {
 
   if (isset($_GET['no_extra_fields']) && $_GET['no_extra_fields'] == 1)
@@ -1387,6 +1359,7 @@ Route::get('/characters/{name}', function($name) {
 
   return Response::json($results);
 });
+*/
 
 Route::get('/online', function() {
 
@@ -1576,6 +1549,7 @@ Route::get('/arena_team_member/{arenaTeamId}', function($arenaTeamId) {
   return Response::json($results);
 })
   ->where('arenaTeamId', '[0-9]+');
+
 
 /* Achievements */
 
@@ -1963,15 +1937,20 @@ Route::get('topgm/ticket/character', function() {
 
 Route::get('ticket/recent/{count}', function($count) {
 
-  $query = DB::connection('characters')->table('gm_ticket');
+  // [AZTH]
+  if (isset($_GET['unresolved']) && $_GET['unresolved'] == env('CUSTOM_PASSWORD'))
+  {
+    $query = DB::connection('characters')->table('gm_ticket');
 
-  $query->leftJoin('characters AS player', 'player.guid', '=', 'gm_ticket.playerGuid');
-  $query->leftJoin('characters AS resolv', 'resolv.guid', '=', 'gm_ticket.resolvedBy');
-  $query->leftJoin('characters AS assign', 'assign.guid', '=', 'gm_ticket.assignedTo');
+    $query->leftJoin('characters AS player', 'player.guid', '=', 'gm_ticket.playerGuid');
+    $query->leftJoin('characters AS resolv', 'resolv.guid', '=', 'gm_ticket.resolvedBy');
+    $query->leftJoin('characters AS assign', 'assign.guid', '=', 'gm_ticket.assignedTo');
 
-  $results = $query->select('gm_ticket.*', 'player.name AS playerCurrentName', 'resolv.name AS resolvedByName', 'assign.name AS assignedToName')->where('gm_ticket.closedBy', '!=', 0)->orWhere('gm_ticket.completed', '!=', 0)->orderBy('gm_ticket.id', 'desc')->take($count)->get();
+    $results = $query->select('gm_ticket.*', 'player.name AS playerCurrentName', 'resolv.name AS resolvedByName', 'assign.name AS assignedToName')->where('gm_ticket.closedBy', '!=', 0)->orWhere('gm_ticket.completed', '!=', 0)->orderBy('gm_ticket.id', 'desc')->take($count)->get();
 
-  return Response::json($results);
+    return Response::json($results);
+  }
+  // [/AZTH]
 });
 
 Route::get('/', 'WelcomeController@index');
