@@ -1578,6 +1578,7 @@ Route::get('/character_achievement', function() {
   if (isset($_GET['from']) && $_GET['from'] != "")
 	$query->skip($_GET['from']);
   $query->take(50);
+  $query->orderBy('Points', 'desc');
   $result = $query->get();
   /* [/AZTH] */
 
