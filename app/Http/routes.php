@@ -1568,6 +1568,8 @@ Route::get('/character_achievement', function() {
   $query = DB::connection('characters')->table('azth_achi_ranking');
   if (isset($_GET['guid']) && $_GET['guid'] != "")
 	$query->where('guid', '=', $_GET['guid']);
+  if (isset($_GET['name']) && $_GET['name'] != "")
+	$query->where('name', 'LIKE', '%' . $_GET['name'] . '%');
   if (isset($_GET['from']) && $_GET['from'] != "")
 	$query->skip($_GET['from']);
   $query->take(50);
