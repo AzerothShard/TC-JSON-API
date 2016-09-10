@@ -988,8 +988,7 @@ Route::get('/quest/request_items/{id}', function($id) {
 
 /* [AZTH] */
 Route::get('/quest/bugged/', function() {
-  $results = DB::connection('world')->select("SELECT ID,LogTitle,Minlevel,AllowableRaces FROM quest_template WHERE ID IN (SELECT ID FROM quest_bugged WHERE bugged = 1)");
-
+  $results = DB::connection('world')->select("SELECT Id AS ID,Title AS LogTitle,Minlevel,RequiredRaces AS AllowableRaces FROM quest_template WHERE ID IN (SELECT ID FROM quest_bugged WHERE bugged = 1)");
   return Response::json($results);
 });
 /* [/AZTH] */
