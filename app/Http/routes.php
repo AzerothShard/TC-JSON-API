@@ -1577,7 +1577,7 @@ Route::get('/character_achievement', function() {
   */
 
   /* [AZTH] */
-  $query = DB::connection('characters')->table('azth_achi_ranking');
+  $query = DB::connection('characters')->table('azth_achi_ranking AS r');
   if (isset($_GET['guid']) && $_GET['guid'] != "")
 	$query->where('guid', '=', $_GET['guid']);
   if (isset($_GET['name']) && $_GET['name'] != "")
@@ -1586,6 +1586,27 @@ Route::get('/character_achievement', function() {
 	$query->skip($_GET['from']);
   $query->take(50);
   $query->orderBy('Points', 'desc');
+  
+  $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild');
+  $query->select("r.guid", "r.name", "race", "class", "level", "gender", "Points", "guild", "g.name AS guildName");
+
+  $result = $query->get();
+  /* [/AZTH] */
+
+  return Response::json($result);
+});
+
+Route::get('/guild_points', function() {
+
+  /* [AZTH] */
+  $query = DB::connection('characters')->table('azth_achi_ranking AS r');
+  $query->selectRaw("guild, g.name AS guildName, SUM(Points) AS Points");
+  $query->where("guild", "!=", "0");
+  $query->groupBy('guild');
+  $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild');
+  $query->orderBy('Points', 'desc');
+  $query->take(50);
+
   $result = $query->get();
   /* [/AZTH] */
 
