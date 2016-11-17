@@ -1579,11 +1579,14 @@ Route::get('/character_achievement', function() {
   /* [AZTH] */
   $query = DB::connection('characters')->table('azth_achi_ranking AS r');
   if (isset($_GET['guid']) && $_GET['guid'] != "")
-	$query->where('guid', '=', $_GET['guid']);
+	$query->where('r.guid', '=', $_GET['guid']);
   if (isset($_GET['name']) && $_GET['name'] != "")
-	$query->where('name', 'LIKE', '%' . $_GET['name'] . '%');
+	$query->where('r.name', 'LIKE', '%' . $_GET['name'] . '%');
+  if (isset($_GET['guild']) && $_GET['guild'] != "")
+	$query->where('r.guild', '=', $_GET['guild']);
   if (isset($_GET['from']) && $_GET['from'] != "")
 	$query->skip($_GET['from']);
+
   $query->take(50);
   $query->orderBy('Points', 'desc');
   
@@ -1605,6 +1608,13 @@ Route::get('/guild_points', function() {
   $query->groupBy('guild');
   $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild');
   $query->orderBy('Points', 'desc');
+
+  if (isset($_GET['name']) && $_GET['name'] != "")
+	$query->where('g.name', 'LIKE', '%' . $_GET['name'] . '%');
+
+  if (isset($_GET['from']) && $_GET['from'] != "")
+	$query->skip($_GET['from']);
+
   $query->take(50);
 
   $result = $query->get();
