@@ -1374,6 +1374,23 @@ Route::get('/characters/{name}', function($name) {
 });
 */
 
+/* Guild */
+Route::get('/guilds', function() {
+
+  $query = DB::connection('characters')->table("guild");
+  $query->select("guildid", "name");
+  $query->orderBy('name', 'ASC');
+
+  if (isset($_GET['take']) && $_GET['take'] != "")
+	$query->take($_GET['take']);
+  if (isset($_GET['from']) && $_GET['from'] != "")
+	$query->skip($_GET['from']);
+
+  $result = $query->get();
+
+  return Response::json($result);
+});
+
 Route::get('/online', function() {
 
   $results = DB::select("SELECT t1.guid, t1.name, t3.guildid as guildId, t3.name AS guildName, t1.race, t1.class, t1.gender, t1.level, t1.map, t1.instance_id, t1.zone
@@ -1588,10 +1605,17 @@ Route::get('/character_achievement', function() {
 	$query->skip($_GET['from']);
 
   $query->take(50);
-  $query->orderBy('Points', 'desc');
+  if (isset($_GET['lifepoints']) && $_GET['lifepoints'] != "" && $_GET['lifepoints'] == "1") {
+  	$query->orderBy('lifetime_points', 'desc');
+	$points = "lifetime_points";
+  }
+  else {
+	$points = "Points";
+	$query->orderBy('Points', 'desc');
+  }
   
   $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild');
-  $query->select("r.guid", "r.name", "race", "class", "level", "gender", "Points", "guild", "g.name AS guildName");
+  $query->select("r.guid", "r.name", "race", "class", "level", "gender", $points . " AS Points", "guild", "g.name AS guildName");
 
   $result = $query->get();
   /* [/AZTH] */
