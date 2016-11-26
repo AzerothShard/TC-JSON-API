@@ -1605,17 +1605,13 @@ Route::get('/character_achievement', function() {
 	$query->skip($_GET['from']);
 
   $query->take(50);
-  if (isset($_GET['lifepoints']) && $_GET['lifepoints'] != "" && $_GET['lifepoints'] == "1") {
+  if (isset($_GET['lifepoints']) && $_GET['lifepoints'] != "" && $_GET['lifepoints'] == "1")
   	$query->orderBy('lifetime_points', 'desc');
-	$points = "lifetime_points";
-  }
-  else {
-	$points = "Points";
+  else
 	$query->orderBy('Points', 'desc');
-  }
   
   $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild');
-  $query->select("r.guid", "r.name", "race", "class", "level", "gender", $points . " AS Points", "guild", "g.name AS guildName");
+  $query->select("r.guid", "r.name", "race", "class", "level", "gender", "Points", "lifetime_points", "guild", "g.name AS guildName");
 
   $result = $query->get();
   /* [/AZTH] */
