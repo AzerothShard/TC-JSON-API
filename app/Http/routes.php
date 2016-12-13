@@ -1611,7 +1611,7 @@ Route::get('/character_achievement', function() {
 	$query->orderBy('Points', 'desc');
   
   $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild');
-  $query->select("r.guid", "r.name", "race", "class", "level", "gender", "Points", "lifetime_points", "guild", "g.name AS guildName");
+  $query->select("r.guid", "r.name", "race", "class", "level", "gender", "Points", "lifetime_points", "guild", "g.name AS guildName", "infos");
 
   $result = $query->get();
   /* [/AZTH] */
