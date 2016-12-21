@@ -1328,7 +1328,7 @@ Route::get('/battleground/deserters/recent/{count}', function($count) {
 
   if (isset($_GET['from']) && $_GET['from'] != "")
     $from = $_GET['from'];
-    
+
   if (isset($_GET['name']) && $_GET['name'] != "")
     $where = "WHERE name LIKE '%" . $_GET['name'] . "%'";
 
@@ -1594,24 +1594,42 @@ Route::get('/character_achievement', function() {
   */
 
   /* [AZTH] */
+  $points_type = "points";
+
   $query = DB::connection('characters')->table('azth_achi_ranking AS r');
   if (isset($_GET['guid']) && $_GET['guid'] != "")
-	$query->where('r.guid', '=', $_GET['guid']);
+	   $query->where('r.guid', '=', $_GET['guid']);
   if (isset($_GET['name']) && $_GET['name'] != "")
-	$query->where('r.name', 'LIKE', '%' . $_GET['name'] . '%');
+	   $query->where('r.name', 'LIKE', '%' . $_GET['name'] . '%');
   if (isset($_GET['guild']) && $_GET['guild'] != "")
-	$query->where('r.guild', '=', $_GET['guild']);
+	   $query->where('r.guild', '=', $_GET['guild']);
   if (isset($_GET['from']) && $_GET['from'] != "")
-	$query->skip($_GET['from']);
+	   $query->skip($_GET['from']);
 
-  $query->take(50);
-  if (isset($_GET['lifepoints']) && $_GET['lifepoints'] != "" && $_GET['lifepoints'] == "1")
+  $query->take(50)
+        ->where('r.points', '>', '0');
+
+  if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
+    $query->orderBy('total', 'desc');
+
+    if (isset($_GET['lifepoints']) && $_GET['lifepoints'] != "" && $_GET['lifepoints'] == "1")
+      $points_type = "lifetime_points";
+  }
+  else if (isset($_GET['lifepoints']) && $_GET['lifepoints'] != "" && $_GET['lifepoints'] == "1")
   	$query->orderBy('lifetime_points', 'desc');
   else
-	$query->orderBy('Points', 'desc');
-  
-  $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild');
-  $query->select("r.guid", "r.name", "race", "class", "level", "gender", "Points", "lifetime_points", "guild", "g.name AS guildName", "infos");
+    $query->orderBy('Points', 'desc');
+
+  /* Get guild */
+  $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild')
+        ->select("r.*", "guild", "g.name AS guildName");
+
+  if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
+    /* Select per account */
+    $query->select("g.name AS guildName", "r.*", DB::raw("COUNT(*) AS sum_pg"), "b.account", DB::raw("SUM(r." . $points_type . ") total")) /*GROUP_CONCAT(b.name ORDER BY r.points DESC SEPARATOR  ','),*/
+          ->leftjoin("characters AS b", "r.guid", "=", "b.guid")
+          ->groupBy("account");
+  }
 
   $result = $query->get();
   /* [/AZTH] */
