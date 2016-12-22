@@ -1626,7 +1626,12 @@ Route::get('/character_achievement', function() {
 
   if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
     /* Select per account */
-    $query->select("g.name AS guildName", "r.*", DB::raw("COUNT(*) AS sum_pg"), "b.account", DB::raw("SUM(r." . $points_type . ") total")) /*GROUP_CONCAT(b.name ORDER BY r.points DESC SEPARATOR  ','),*/
+    $query->select("g.name AS guildName",
+                   "r.*",
+                   DB::raw("COUNT(*) AS sum_pg"), "b.account", DB::raw("SUM(r." . $points_type . ") total"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.name ORDER BY r." . $points_type . " DESC SEPARATOR  ','),',', 1) AS name"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.guid ORDER BY r." . $points_type . " DESC SEPARATOR  ','),',', 1) AS guid")
+                   )
           ->leftjoin("characters AS b", "r.guid", "=", "b.guid")
           ->groupBy("account");
   }
