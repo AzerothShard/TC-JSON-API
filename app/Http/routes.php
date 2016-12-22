@@ -1626,11 +1626,16 @@ Route::get('/character_achievement', function() {
 
   if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
     /* Select per account */
-    $query->select("g.name AS guildName",
-                   "r.*",
+    $query->select("r.*",
                    DB::raw("COUNT(*) AS sum_pg"), "b.account", DB::raw("SUM(r." . $points_type . ") total"),
-                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.name ORDER BY r." . $points_type . " DESC SEPARATOR  ','),',', 1) AS name"),
-                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.guid ORDER BY r." . $points_type . " DESC SEPARATOR  ','),',', 1) AS guid")
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.name ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS name"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.guid ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS guid"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.class ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS class"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.race ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS race"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.level ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS level"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.gender ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS gender"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(g.guildid ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS guildid"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(g.name ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS guildName")
                    )
           ->leftjoin("characters AS b", "r.guid", "=", "b.guid")
           ->groupBy("account");
