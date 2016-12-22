@@ -1597,17 +1597,36 @@ Route::get('/character_achievement', function() {
   $points_type = "points";
 
   $query = DB::connection('characters')->table('azth_achi_ranking AS r');
+
   if (isset($_GET['guid']) && $_GET['guid'] != "")
-	   $query->where('r.guid', '=', $_GET['guid']);
-  if (isset($_GET['name']) && $_GET['name'] != "")
-	   $query->where('r.name', 'LIKE', '%' . $_GET['name'] . '%');
+    $query->where('r.guid', '=', $_GET['guid']);
   if (isset($_GET['guild']) && $_GET['guild'] != "")
 	   $query->where('r.guild', '=', $_GET['guild']);
   if (isset($_GET['from']) && $_GET['from'] != "")
 	   $query->skip($_GET['from']);
 
-  $query->take(50)
-        ->where('r.points', '>', '0');
+  if (isset($_GET['name']) && $_GET['name'] != "") {
+
+   if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
+     /* get accounts id for search per_account */
+     $accounts = DB::connection('characters')->table('characters')
+                                             ->select("account")
+                                             ->where('name', 'LIKE', '%' . $_GET['name'] . '%')
+                                             ->get();
+     $accounts_id = "";
+     foreach ($accounts as $account)
+      $accounts_id .= $account->account . ",";
+
+     $accounts_id = substr($accounts_id, 0, -1);
+     $accounts_id = explode(",", $accounts_id);
+
+     $query->whereIn("account", $accounts_id);
+   }
+   else
+     $query->where('r.name', 'LIKE', '%' . $_GET['name'] . '%');
+  }
+
+  $query->take(50)->where('r.points', '>', '0');
 
   if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
     $query->orderBy('total', 'desc');
