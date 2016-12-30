@@ -1668,13 +1668,18 @@ Route::get('/character_achievement', function() {
 
 Route::get('/guild_points', function() {
 
+  if (isset($_GET['if_lifetime']) && $_GET['if_lifetime'] != "" && $_GET['if_lifetime'] == "1")
+    $points_type = "lifetime_points";
+  else
+    $points_type = "Points";
+
   /* [AZTH] */
   $query = DB::connection('characters')->table('azth_achi_ranking AS r');
-  $query->selectRaw("guild, g.name AS guildName, SUM(Points) AS Points");
+  $query->selectRaw("guild, g.name AS guildName, SUM(" . $points_type . ") AS " . $points_type);
   $query->where("guild", "!=", "0");
   $query->groupBy('guild');
   $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild');
-  $query->orderBy('Points', 'desc');
+  $query->orderBy($points_type, 'desc');
 
   if (isset($_GET['name']) && $_GET['name'] != "")
 	$query->where('g.name', 'LIKE', '%' . $_GET['name'] . '%');
