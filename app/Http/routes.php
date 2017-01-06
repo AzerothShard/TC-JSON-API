@@ -1548,25 +1548,64 @@ Route::get('/tophonor', function() {
 /* Arena routes */
 
 Route::get('/arena_team/id/{arenaTeamId}', function($arenaTeamId) {
-  $results = DB::connection('characters')->select("SELECT t1.*, t2.name AS captainName, t2.race AS captainRace FROM arena_team AS t1 INNER JOIN characters AS t2 ON t1.captainGuid = t2.guid WHERE t1.arenaTeamId = ?", [$arenaTeamId]);
+
+  /* [AZTH] */
+  $prefix = "";
+  $season = "";
+
+  if (isset($_GET['season']) && $_GET['season'] != "") {
+    $prefix = "azth_";
+    $season = "AND season = " . $_GET['season'];
+  }
+
+  $results = DB::connection('characters')->select("
+    SELECT t1.*, t2.name AS captainName, t2.race AS captainRace
+    FROM " . $prefix . "arena_team AS t1
+    INNER JOIN characters AS t2 ON t1.captainGuid = t2.guid
+    WHERE t1.arenaTeamId = " . $arenaTeamId . " " . $season);
 
   return Response::json($results);
 })
   ->where('arenaTeamId', '[0-9]+');
 
 Route::get('/arena_team/type/{type}/', function($type) {
-  $results = DB::connection('characters')->select("SELECT t1.*, t2.name AS captainName, t2.race AS captainRace FROM arena_team AS t1 INNER JOIN characters AS t2 ON t1.captainGuid = t2.guid WHERE t1.type = ? ORDER BY rating DESC", [$type]);
+
+  /* [AZTH] */
+  $prefix = "";
+  $season = "";
+
+  if (isset($_GET['season']) && $_GET['season'] != "") {
+    $prefix = "azth_";
+    $season = "AND season = " . $_GET['season'];
+  }
+
+  $results = DB::connection('characters')->select("
+    SELECT t1.*, t2.name AS captainName, t2.race AS captainRace
+    FROM " . $prefix . "arena_team AS t1
+    INNER JOIN characters AS t2 ON t1.captainGuid = t2.guid
+    WHERE t1.type = " . $type . " " . $season . "
+    ORDER BY rating DESC");
 
   return Response::json($results);
 })
   ->where('type', '[0-9]+');
 
 Route::get('/arena_team_member/{arenaTeamId}', function($arenaTeamId) {
+
+  /* [AZTH] */
+  $prefix = "";
+  $season = "";
+
+  if (isset($_GET['season']) && $_GET['season'] != "") {
+    $prefix = "azth_";
+    $season = "AND t3.season = " . $_GET['season'];
+  }
+
   $results = DB::connection('characters')->select("
   SELECT t1.*, t4.matchmakerRating AS matchmakerRating, t2.name AS name, t2.class AS class, t2.race AS race, t2.gender as gender
-  FROM arena_team_member AS t1 INNER JOIN characters AS t2 ON t1.guid = t2.guid
-  INNER JOIN arena_team AS t3 ON t1.arenaTeamId = t3.arenaTeamId
-  LEFT JOIN character_arena_stats AS t4 ON
+  FROM " . $prefix ."arena_team_member AS t1 INNER JOIN characters AS t2 ON t1.guid = t2.guid
+  INNER JOIN " . $prefix ."arena_team AS t3 ON t1.arenaTeamId = t3.arenaTeamId
+  LEFT JOIN " . $prefix ."character_arena_stats AS t4 ON
   (t1.guid = t4.guid AND t3.type =
     (CASE t4.slot
       WHEN 0 THEN 2
@@ -1574,12 +1613,20 @@ Route::get('/arena_team_member/{arenaTeamId}', function($arenaTeamId) {
       WHEN 2 THEN 5
     END)
   )
-  WHERE t1.arenaTeamId = ?", [$arenaTeamId]);
+  WHERE t1.arenaTeamId = " . $arenaTeamId . " " . $season);
 
   return Response::json($results);
 })
   ->where('arenaTeamId', '[0-9]+');
 
+
+  Route::get('/get_tournament_seasons', function() {
+
+    /* [AZTH] */
+    $results = DB::connection('characters')->select("SELECT COUNT(DISTINCT season) AS count FROM azth_arena_team");
+
+    return Response::json($results);
+  });
 
 /* Achievements */
 
