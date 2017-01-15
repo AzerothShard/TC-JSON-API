@@ -1654,28 +1654,28 @@ Route::get('/character_achievement', function() {
 
   if (isset($_GET['name']) && $_GET['name'] != "") {
 
-   if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
-     /* get accounts id for search per_account */
-     $query->having('LOWER(name)','LIKE','%' . strtolower($_GET['name']) . '%');
-   }
-   else
-     $query->where('LOWER(r.name)', 'LIKE', '%' . strtolower($_GET['name']) . '%');
+    if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
+      /* get accounts id for search per_account */
+      $query->having('name','LIKE','%' . ($_GET['name']) . '%');
+    }
+    else
+      $query->where('r.name', 'LIKE', '%' . ($_GET['name']) . '%');
   }
 
   $query->take(50);
 
-  if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
+  if (isset($_GET['per_account']) && $_GET['per_account'] == "1") {
     $query->orderBy('total', 'desc');
 
-    if (isset($_GET['lifepoints']) && $_GET['lifepoints'] != "" && $_GET['lifepoints'] == "1")
+    if (isset($_GET['lifepoints']) && $_GET['lifepoints'] == "1")
       $points_type = "lifetime_points";
   }
-  else if (isset($_GET['lifepoints']) && $_GET['lifepoints'] != "" && $_GET['lifepoints'] == "1")
+  else if (isset($_GET['lifepoints']) && $_GET['lifepoints'] == "1")
   	$query->orderBy('lifetime_points', 'desc');
-  else {
+  else
     $query->orderBy('Points', 'desc');
-    $query->where('r.points', '>', '0');
-  }
+
+  $query->where('r.' . $points_type, '>', '0');
 
   /* Get guild */
   $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild')
