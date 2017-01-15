@@ -1656,18 +1656,7 @@ Route::get('/character_achievement', function() {
 
    if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
      /* get accounts id for search per_account */
-     $accounts = DB::connection('characters')->table('characters')
-                                             ->select("account")
-                                             ->where('LOWER(name)', 'LIKE', '%' . strtolower($_GET['name']) . '%')
-                                             ->get();
-     $accounts_id = "";
-     foreach ($accounts as $account)
-      $accounts_id .= $account->account . ",";
-
-     $accounts_id = substr($accounts_id, 0, -1);
-     $accounts_id = explode(",", $accounts_id);
-
-     $query->whereIn("account", $accounts_id);
+     $query->having('LOWER(name)','LIKE','%' . strtolower($_GET['name']) . '%');
    }
    else
      $query->where('LOWER(r.name)', 'LIKE', '%' . strtolower($_GET['name']) . '%');
