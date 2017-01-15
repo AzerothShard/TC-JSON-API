@@ -1658,7 +1658,7 @@ Route::get('/character_achievement', function() {
      /* get accounts id for search per_account */
      $accounts = DB::connection('characters')->table('characters')
                                              ->select("account")
-                                             ->where('name', 'LIKE', '%' . $_GET['name'] . '%')
+                                             ->where('LOWER(name)', 'LIKE', '%' . strtolower($_GET['name']) . '%')
                                              ->get();
      $accounts_id = "";
      foreach ($accounts as $account)
@@ -1670,10 +1670,10 @@ Route::get('/character_achievement', function() {
      $query->whereIn("account", $accounts_id);
    }
    else
-     $query->where('r.name', 'LIKE', '%' . $_GET['name'] . '%');
+     $query->where('LOWER(r.name)', 'LIKE', '%' . strtolower($_GET['name']) . '%');
   }
 
-  $query->take(50)->where('r.points', '>', '0');
+  $query->take(50);
 
   if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
     $query->orderBy('total', 'desc');
@@ -1683,8 +1683,10 @@ Route::get('/character_achievement', function() {
   }
   else if (isset($_GET['lifepoints']) && $_GET['lifepoints'] != "" && $_GET['lifepoints'] == "1")
   	$query->orderBy('lifetime_points', 'desc');
-  else
+  else {
     $query->orderBy('Points', 'desc');
+    $query->where('r.points', '>', '0');
+  }
 
   /* Get guild */
   $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild')
