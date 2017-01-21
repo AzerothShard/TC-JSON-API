@@ -236,81 +236,45 @@ Route::get('/search/gameobject', function() {
     return Response::json($results);
 });
 
+/* [AZTH] disable
 Route::get('/search/character', function() {
 
-    if ( !isset($_GET['guid']) && !isset($_GET['account']) && !isset($_GET['name']) )
-        return Response::json(array("error" => "please insert at least one parameter"));
+  if ( !isset($_GET['guid']) && !isset($_GET['account']) && !isset($_GET['name']) )
+    return Response::json(array("error" => "please insert at least one parameter"));
 
-    $query = DB::connection('characters')->table('characters')->select('guid', 'account', 'name');
+  $query = DB::connection('characters')->table('characters')->select('guid', 'account', 'name');
 
-    if (isset($_GET['guid']) && $_GET['guid'] != "")
-        $query->where('guid', 'LIKE', '%'. $_GET['guid'] .'%');
+  if (isset($_GET['guid']) && $_GET['guid'] != "")
+    $query->where('guid', 'LIKE', '%'. $_GET['guid'] .'%');
 
-    if (isset($_GET['account']) && $_GET['account'] != "")
-        $query->where('account', 'LIKE', '%'. $_GET['account'] .'%');
+  if (isset($_GET['account']) && $_GET['account'] != "")
+    $query->where('account', 'LIKE', '%'. $_GET['account'] .'%');
 
-    if (isset($_GET['name']) && $_GET['name'] != "")
-        $query->where('name', 'LIKE', '%'. $_GET['name'] .'%');
+  if (isset($_GET['name']) && $_GET['name'] != "")
+    $query->where('name', 'LIKE', '%'. $_GET['name'] .'%');
 
-    $results = $query->orderBy('guid')->get();
+  $results = $query->orderBy('guid')->get();
 
-    return Response::json($results);
+  return Response::json($results);
 });
+*/
 
 Route::get('/search/tickets', function() {
-
+  /* [AZTH] custom */
+  if (isset($_GET['unresolved']) && $_GET['unresolved'] == env('CUSTOM_PASSWORD'))
+  {
     $query = DB::connection('characters')->table('gm_ticket');
 
-    if (\App\Helpers\TCAPI::is("wod"))
-    {
-        // TODO
-        return [];
-    }
-    else
-    {
-        $query->join('characters AS player', 'player.guid', '=', 'gm_ticket.playerGuid');
-        $query->leftJoin('characters AS assign', 'assign.guid', '=', 'gm_ticket.assignedTo');
+    $query->join('characters AS player', 'player.guid', '=', 'gm_ticket.playerGuid');
+    $query->leftJoin('characters AS assign', 'assign.guid', '=', 'gm_ticket.assignedTo');
 
-        if (isset($_GET['unresolved']) && $_GET['unresolved'] == 1)
-            $query->where('gm_ticket.closedBy', '=', 0)->where('gm_ticket.completed', '=', 0);
+    $query->where('gm_ticket.closedBy', '=', 0)->where('gm_ticket.completed', '=', 0);
 
-        if (isset($_GET['online']) && $_GET['online'] != "")
-            $query->where('characters.online', '=', $_GET['online']);
-
-        if (isset($_GET['closedBy']) && $_GET['closedBy'] != "")
-            $query->where('gm_ticket.closedBy', '=', $_GET['closedBy']);
-
-        if (isset($_GET['createTime']) && $_GET['createTime'] != "")
-            $query->where('gm_ticket.createTime', '=', $_GET['createTime']);
-
-        if (isset($_GET['lastModifiedTime']) && $_GET['lastModifiedTime'] != "")
-            $query->where('gm_ticket.lastModifiedTime', '=', $_GET['lastModifiedTime']);
-
-        if (isset($_GET['id']) && $_GET['id'] != "")
-            $query->where('gm_ticket.id', 'LIKE', '%'. $_GET['id'] .'%');
-
-        if (isset($_GET['playerGuid']) && $_GET['playerGuid'] != "")
-            $query->where('gm_ticket.playerGuid', 'LIKE', '%'. $_GET['playerGuid'] .'%');
-
-        if (isset($_GET['name']) && $_GET['name'] != "")
-            $query->where('gm_ticket.name', 'LIKE', '%'. $_GET['name'] .'%');
-
-        if (isset($_GET['description']) && $_GET['description'] != "")
-            $query->where('gm_ticket.description', 'LIKE', '%'. $_GET['description'] .'%');
-
-        if (isset($_GET['assignedTo']) && $_GET['assignedTo'] != "")
-            $query->where('gm_ticket.assignedTo', 'LIKE', '%'. $_GET['assignedTo'] .'%');
-
-        if (isset($_GET['comment']) && $_GET['comment'] != "")
-            $query->where('gm_ticket.comment', 'LIKE', '%'. $_GET['comment'] .'%');
-
-        if (isset($_GET['response']) && $_GET['response'] != "")
-            $query->where('gm_ticket.response', 'LIKE', '%'. $_GET['response'] .'%');
-
-        $results = $query->select('gm_ticket.*', 'player.name AS playerCurrentName', 'player.online', 'assign.name AS assignedToName')->orderBy('gm_ticket.id')->get();
-    }
+    $results = $query->select('gm_ticket.*', 'player.name AS playerCurrentName', 'player.online', 'assign.name AS assignedToName')->orderBy('gm_ticket.id')->get();
 
     return Response::json($results);
+  }
+
 });
 
 Route::get('/search/smart_scripts', function() {
@@ -988,6 +952,12 @@ Route::get('/quest/request_items/{id}', function($id) {
 })
     ->where('id', '[0-9]+');
 
+/* [AZTH] */
+Route::get('/quest/bugged/', function() {
+  $results = DB::connection('world')->select("SELECT Id AS ID,Title AS LogTitle,Minlevel,RequiredRaces AS AllowableRaces FROM quest_template WHERE ID IN (SELECT ID FROM quest_bugged WHERE bugged = 1)");
+  return Response::json($results);
+});
+/* [/AZTH] */
 
 /* Vendors */
 
@@ -1339,26 +1309,36 @@ Route::get('/battleground/deserters/recent/{count}', function($count) {
   ->where('id', '[0-9]+');
 
 Route::get('/characters/{guid}', function($guid) {
+/*
+  if (isset($_GET['no_extra_fields']) && $_GET['no_extra_fields'] == 1)
+    $results = DB::connection('characters')->select("SELECT * FROM characters WHERE guid = ?", [$guid]);
+  else
+    $results = DB::connection('characters')->select("SELECT t1.guid, t1.name, t3.guildid as guildId, t3.name AS guildName, t1.race, t1.class, t1.gender, t1.level, t1.xp, t1.money, t1.playerBytes, t1.playerBytes2, t1.playerFlags, t1.map, t1.instance_id, t1.online, t1.is_logout_resting, t1.arenaPoints, t1.totalHonorPoints, t1.todayHonorPoints, t1.yesterdayHonorPoints, t1.totalKills, t1.todayKills, t1.yesterdayKills, t1.chosenTitle FROM characters AS t1 LEFT JOIN guild_member AS t2 ON t1.guid = t2.guid LEFT JOIN guild AS t3 ON t2.guildid = t3.guildid WHERE t1.guid = ?", [$guid]);
+*/
+/* [AZTH] custom */
+    $results = DB::connection('characters')->select("
+    SELECT t1.guid, t1.name, t3.name AS guildName, t1.race, t1.class, t1.gender, t1.level
+    FROM characters AS t1
+    LEFT JOIN guild_member AS t2 ON t1.guid = t2.guid
+    LEFT JOIN guild AS t3 ON t2.guildid = t3.guildid
+    WHERE t1.guid = ?", [$guid]);
 
-    if (isset($_GET['no_extra_fields']) && $_GET['no_extra_fields'] == 1)
-        $results = DB::connection('characters')->select("SELECT * FROM characters WHERE guid = ?", [$guid]);
-    else
-        $results = DB::connection('characters')->select("SELECT t1.guid, t1.name, t3.guildid as guildId, t3.name AS guildName, t1.race, t1.class, t1.gender, t1.level, t1.xp, t1.money, t1.playerFlags, t1.map, t1.instance_id, t1.online, t1.is_logout_resting, t1.totalKills, t1.todayKills, t1.yesterdayKills, t1.chosenTitle FROM characters AS t1 LEFT JOIN guild_member AS t2 ON t1.guid = t2.guid LEFT JOIN guild AS t3 ON t2.guildid = t3.guildid WHERE t1.guid = ?", [$guid]);
-
-    return Response::json($results);
+  return Response::json($results);
 })
-    ->where('guid', '[0-9]+');
+  ->where('guid', '[0-9]+');
 
+/* [AZTH] disable
 Route::get('/characters/{name}', function($name) {
 
-    $name = DB::connection()->getPdo()->quote("%" . $name . "%");
+  $name = DB::connection()->getPdo()->quote("%" . $name . "%");
 
-    $query = sprintf("SELECT t1.guid, t1.name, t3.guildid as guildId, t3.name AS guildName, t1.race, t1.class, t1.gender, t1.level, t1.xp, t1.money, t1.playerFlags, t1.map, t1.instance_id, t1.online, t1.is_logout_resting, t1.totalKills, t1.todayKills, t1.yesterdayKills, t1.chosenTitle FROM characters AS t1 LEFT JOIN guild_member AS t2 ON t1.guid = t2.guid LEFT JOIN guild AS t3 ON t2.guildid = t3.guildid WHERE t1.name LIKE %s", $name);
+  $query = sprintf("SELECT t1.guid, t1.name, t3.guildid as guildId, t3.name AS guildName, t1.race, t1.class, t1.gender, t1.level, t1.xp, t1.money, t1.playerBytes, t1.playerBytes2, t1.playerFlags, t1.map, t1.instance_id, t1.online, t1.is_logout_resting, t1.arenaPoints, t1.totalHonorPoints, t1.todayHonorPoints, t1.yesterdayHonorPoints, t1.totalKills, t1.todayKills, t1.yesterdayKills, t1.chosenTitle FROM characters AS t1 LEFT JOIN guild_member AS t2 ON t1.guid = t2.guid LEFT JOIN guild AS t3 ON t2.guildid = t3.guildid WHERE t1.name LIKE %s", $name);
 
-    $results = DB::connection('characters')->select($query);
+  $results = DB::connection('characters')->select($query);
 
-    return Response::json($results);
+  return Response::json($results);
 });
+*/
 
 /* Guild */
 Route::get('/guilds', function() {
@@ -1377,9 +1357,13 @@ Route::get('/guilds', function() {
 
 Route::get('/online', function() {
 
-    $results = DB::connection('characters')->select("SELECT t1.guid, t1.name, t3.guildid as guildId, t3.name AS guildName, t1.race, t1.class, t1.gender, t1.level, t1.map, t1.instance_id, t1.zone FROM characters AS t1 LEFT JOIN guild_member AS t2 ON t1.guid = t2.guid LEFT JOIN guild AS t3 ON t2.guildid = t3.guildid WHERE t1.online = 1");
+  $results = DB::select("SELECT t1.guid, t1.name, t3.guildid as guildId, t3.name AS guildName, t1.race, t1.class, t1.gender, t1.level, t1.map, t1.instance_id, t1.zone
+  FROM " . env('DB_CHARACTERS') . ".characters AS t1
+  LEFT JOIN " . env('DB_CHARACTERS') . ".guild_member AS t2 ON t1.guid = t2.guid
+  LEFT JOIN " . env('DB_CHARACTERS') . ".guild AS t3 ON t2.guildid = t3.guildid
+  WHERE t1.online = 1 AND t1.account NOT IN (SELECT id FROM " . env('DB_AUTH') . ".account_access WHERE gmlevel != 0)");
 
-    return Response::json($results);
+  return Response::json($results);
 });
 
 
@@ -1528,50 +1512,189 @@ Route::get('/tophonor', function() {
 /* Arena routes */
 
 Route::get('/arena_team/id/{arenaTeamId}', function($arenaTeamId) {
-    $results = DB::connection('characters')->select("SELECT t1.*, t2.name AS captainName, t2.race AS captainRace FROM arena_team AS t1 INNER JOIN characters AS t2 ON t1.captainGuid = t2.guid WHERE t1.arenaTeamId = ?", [$arenaTeamId]);
 
-    return Response::json($results);
+  /* [AZTH] */
+  $prefix = "";
+  $season = "";
+
+  if (isset($_GET['season']) && $_GET['season'] != "") {
+    $prefix = "azth_";
+    $season = "AND season = " . $_GET['season'];
+  }
+
+  $results = DB::connection('characters')->select("
+    SELECT t1.*, t2.name AS captainName, t2.race AS captainRace
+    FROM " . $prefix . "arena_team AS t1
+    INNER JOIN characters AS t2 ON t1.captainGuid = t2.guid
+    WHERE t1.arenaTeamId = " . $arenaTeamId . " " . $season);
+
+  return Response::json($results);
 })
-    ->where('arenaTeamId', '[0-9]+');
+  ->where('arenaTeamId', '[0-9]+');
 
 Route::get('/arena_team/type/{type}/', function($type) {
-    $results = DB::connection('characters')->select("SELECT t1.*, t2.name AS captainName, t2.race AS captainRace FROM arena_team AS t1 INNER JOIN characters AS t2 ON t1.captainGuid = t2.guid WHERE t1.type = ? ORDER BY rating DESC", [$type]);
 
-    return Response::json($results);
+  /* [AZTH] */
+  $prefix = "";
+  $season = "";
+
+  if (isset($_GET['season']) && $_GET['season'] != "") {
+    $prefix = "azth_";
+    $season = "AND season = " . $_GET['season'];
+  }
+
+  $results = DB::connection('characters')->select("
+    SELECT t1.*, t2.name AS captainName, t2.race AS captainRace
+    FROM " . $prefix . "arena_team AS t1
+    INNER JOIN characters AS t2 ON t1.captainGuid = t2.guid
+    WHERE t1.type = " . $type . " " . $season . "
+    ORDER BY rating DESC");
+
+  return Response::json($results);
 })
-    ->where('type', '[0-9]+');
+  ->where('type', '[0-9]+');
 
 Route::get('/arena_team_member/{arenaTeamId}', function($arenaTeamId) {
-    $results = DB::connection('characters')->select("
-    SELECT t1.*, t4.matchmakerRating AS matchmakerRating, t2.name AS name, t2.class AS class, t2.race AS race, t2.gender as gender
-    FROM arena_team_member AS t1 INNER JOIN characters AS t2 ON t1.guid = t2.guid
-    INNER JOIN arena_team AS t3 ON t1.arenaTeamId = t3.arenaTeamId
-    LEFT JOIN character_arena_stats AS t4 ON
-    (t1.guid = t4.guid AND t3.type =
-        (CASE t4.slot
-            WHEN 0 THEN 2
-            WHEN 1 THEN 3
-            WHEN 2 THEN 5
-        END)
-    )
-    WHERE t1.arenaTeamId = ?", [$arenaTeamId]);
+
+  /* [AZTH] */
+  $prefix = "";
+  $season = "";
+
+  if (isset($_GET['season']) && $_GET['season'] != "") {
+    $prefix = "azth_";
+    $season = "AND t3.season = " . $_GET['season'];
+  }
+
+  $results = DB::connection('characters')->select("
+  SELECT t1.*, t4.matchmakerRating AS matchmakerRating, t2.name AS name, t2.class AS class, t2.race AS race, t2.gender as gender
+  FROM " . $prefix ."arena_team_member AS t1 INNER JOIN characters AS t2 ON t1.guid = t2.guid
+  INNER JOIN " . $prefix ."arena_team AS t3 ON t1.arenaTeamId = t3.arenaTeamId
+  LEFT JOIN " . $prefix ."character_arena_stats AS t4 ON
+  (t1.guid = t4.guid AND t3.type =
+    (CASE t4.slot
+      WHEN 0 THEN 2
+      WHEN 1 THEN 3
+      WHEN 2 THEN 5
+    END)
+  )
+  WHERE t1.arenaTeamId = " . $arenaTeamId . " " . $season);
+
+  return Response::json($results);
+})
+  ->where('arenaTeamId', '[0-9]+');
+
+
+  Route::get('/get_tournament_seasons', function() {
+
+    /* [AZTH] */
+    $results = DB::connection('characters')->select("SELECT COUNT(DISTINCT season) AS count FROM azth_arena_team");
 
     return Response::json($results);
-})
-    ->where('arenaTeamId', '[0-9]+');
+  });
 
 /* Achievements */
 
 Route::get('/character_achievement', function() {
-
-    $results = DB::select('SELECT cha.guid, SUM(Points) AS Points, ch.account, ch.name, ch.level, ch.race, ch.class, ch.gender
+  /*
+  $results = DB::select('SELECT cha.guid, SUM(Points) AS Points, ch.account, ch.name, ch.level, ch.race, ch.class, ch.gender
     FROM ' . env('DB_CHARACTERS') . '.character_achievement cha
     JOIN ' . env('DB_DBC') . '.achievement AS ac ON cha.achievement = ac.ID
     JOIN ' . env('DB_CHARACTERS') . '.characters AS ch ON cha.guid = ch.guid
     GROUP BY (cha.guid)
     ORDER BY SUM(Points) DESC');
+  */
 
-    return Response::json($results);
+  /* [AZTH] */
+  $points_type = "points";
+
+  $query = DB::connection('characters')->table('azth_achi_ranking AS r');
+
+  if (isset($_GET['guid']) && $_GET['guid'] != "")
+    $query->where('r.guid', '=', $_GET['guid']);
+  if (isset($_GET['guild']) && $_GET['guild'] != "")
+	   $query->where('r.guild', '=', $_GET['guild']);
+  if (isset($_GET['from']) && $_GET['from'] != "")
+	   $query->skip($_GET['from']);
+
+  if (isset($_GET['name']) && $_GET['name'] != "") {
+
+    if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
+      /* get accounts id for search per_account */
+      $query->having('name','LIKE','%' . ($_GET['name']) . '%');
+    }
+    else
+      $query->where('r.name', 'LIKE', '%' . ($_GET['name']) . '%');
+  }
+
+  $query->take(50);
+
+  if (isset($_GET['per_account']) && $_GET['per_account'] == "1") {
+    $query->orderBy('total', 'desc');
+
+    if (isset($_GET['lifepoints']) && $_GET['lifepoints'] == "1")
+      $points_type = "lifetime_points";
+  }
+  else if (isset($_GET['lifepoints']) && $_GET['lifepoints'] == "1")
+  	$query->orderBy('lifetime_points', 'desc');
+  else
+    $query->orderBy('Points', 'desc');
+
+  $query->where('r.' . $points_type, '>', '0');
+
+  /* Get guild */
+  $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild')
+        ->select("r.*", "guild", "g.name AS guildName");
+
+  if (isset($_GET['per_account']) && $_GET['per_account'] != "" && $_GET['per_account'] == "1") {
+    /* Select per account */
+    $query->select("r.*",
+                   DB::raw("COUNT(*) AS sum_pg"), "b.account", DB::raw("SUM(r." . $points_type . ") total"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.name ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS name"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.guid ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS guid"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.class ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS class"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.race ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS race"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.level ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS level"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(b.gender ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS gender"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(g.guildid ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS guildid"),
+                   DB::raw("SUBSTRING_INDEX(GROUP_CONCAT(g.name ORDER BY r." . $points_type . " DESC SEPARATOR ','),',', 1) AS guildName")
+                   )
+          ->leftjoin("characters AS b", "r.guid", "=", "b.guid")
+          ->groupBy("account");
+  }
+
+  $result = $query->get();
+  /* [/AZTH] */
+
+  return Response::json($result);
+});
+
+Route::get('/guild_points', function() {
+
+  if (isset($_GET['if_lifetime']) && $_GET['if_lifetime'] != "" && $_GET['if_lifetime'] == "1")
+    $points_type = "lifetime_points";
+  else
+    $points_type = "Points";
+
+  /* [AZTH] */
+  $query = DB::connection('characters')->table('azth_achi_ranking AS r');
+  $query->selectRaw("guild, g.name AS guildName, SUM(" . $points_type . ") AS " . $points_type);
+  $query->where("guild", "!=", "0");
+  $query->groupBy('guild');
+  $query->leftjoin('guild AS g', 'g.guildid', '=', 'r.guild');
+  $query->orderBy($points_type, 'desc');
+
+  if (isset($_GET['name']) && $_GET['name'] != "")
+	$query->where('g.name', 'LIKE', '%' . $_GET['name'] . '%');
+
+  if (isset($_GET['from']) && $_GET['from'] != "")
+	$query->skip($_GET['from']);
+
+  $query->take(50);
+
+  $result = $query->get();
+  /* [/AZTH] */
+
+  return Response::json($result);
 });
 
 Route::get('/character_achievement/{guid}', function($guid) {
@@ -1881,6 +2004,9 @@ Route::get('topgm/ticket/character', function() {
 
 Route::get('ticket/recent/{count}', function($count) {
 
+  // [AZTH]
+  if (isset($_GET['unresolved']) && $_GET['unresolved'] == env('CUSTOM_PASSWORD'))
+  {
     $query = DB::connection('characters')->table('gm_ticket');
 
     $query->leftJoin('characters AS player', 'player.guid', '=', 'gm_ticket.playerGuid');
@@ -1890,6 +2016,8 @@ Route::get('ticket/recent/{count}', function($count) {
     $results = $query->select('gm_ticket.*', 'player.name AS playerCurrentName', 'resolv.name AS resolvedByName', 'assign.name AS assignedToName')->where('gm_ticket.closedBy', '!=', 0)->orWhere('gm_ticket.completed', '!=', 0)->orderBy('gm_ticket.id', 'desc')->take($count)->get();
 
     return Response::json($results);
+  }
+  // [/AZTH]
 });
 
 Route::get('/', 'WelcomeController@index');
