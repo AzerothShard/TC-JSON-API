@@ -3,8 +3,11 @@
 In order to install this API, your system must have:
 
 - **[TDB 335.59](https://github.com/TrinityCore/TrinityCore/releases/)** or newer
-- **PHP 5.4** or newer
-- **Mcrypt PHP Extension**
+- **PHP 5.5.9** or newer
+- **OpenSSL PHP Extension**
+- **PDO PHP Extension**
+- **Mbstring PHP Extensionn**
+- **Tokenizer PHP Extension**
 - **PHP Sqlite driver (php5-sqlite)**
 
 If you are installing it from sources you will also need:
@@ -12,28 +15,13 @@ If you are installing it from sources you will also need:
 - **[Composer](https://getcomposer.org/)**
 - **[Laravel](http://laravel.com)**
 
-You may also need:
+### Installing requirements on Ubuntu 16.04
 
-- OpenSSL PHP Extension
-- Mbstring PHP Extension
-- Tokenizer PHP Extension
+To install the requirements you can type the following command on the terminal:
 
-### Installing mcrypt on Ubuntu
+`sudo apt install php-xml php-mbstring php-sqlite3`
 
-To install mcrypt from command line need to run:
-
-`sudo apt-get install php5-mcrypt`
-
-On Ubuntu when you run sudo apt-get install php5-mcrypt it doesn't actually install the extension into the mods-available. You'll need to symlink it with the follow command:
-
-
-`sudo ln -s /etc/php5/conf.d/mcrypt.ini /etc/php5/mods-available/mcrypt.ini`
-
-Well, now you must enable the mod with:
-
-`sudo php5enmod mcrypt`
 `sudo service apache2 restart`
-
 
 ## 1) [Easy] Get full version archive of latest release
 
@@ -60,6 +48,18 @@ if you don't have [git](http://git-scm.com/) installed, you can [download it dir
 `composer install`
 
 - Copy the file **.env.example** to **.env**
+
+- Automatic encryption key generation:
+
+`php artisan key:generate`
+
+- Generate key for auth:
+
+`php artisan jwt:generate`
+
+- DB structure for auth:
+
+`php artisan migrate`
 
 ## 2) Configure the API
 
@@ -88,6 +88,28 @@ If everything is ok you should be able to correctly open [http://localhost/TC-JS
 From now on you can perform HTTP requests to the API at **http://localhost/TC-JSON-API/public/index.php/**.
 
 Check [our documentation](https://github.com/ShinDarth/TC-JSON-API/wiki) to see all possible requests.
+
+## Enabling Debug mode
+
+`APP_ENV=production`
+
+`APP_DEBUG=false`
+
+Replace with:
+
+`APP_ENV=local`
+
+`APP_DEBUG=true`
+
+Now you can see error messages in your browser & logs too.
+
+**Be careful! Do not use debug mode on production server.**
+
+## Developing environment
+
+You really don't need install apache or nginx on your local PC for developing, that easily to use integrated web server.
+Go to root project directory and run CLI command:
+`php artisan serve`
 
 ## Troubleshooting
 
