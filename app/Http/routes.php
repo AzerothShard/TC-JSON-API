@@ -1602,7 +1602,7 @@ Route::get('/arena_team_member/{arenaTeamId}', function($arenaTeamId) {
   }
 
   $results = DB::connection('characters')->select("
-  SELECT t1.*, t4.matchmakerRating AS matchmakerRating, t2.name AS name, t2.class AS class, t2.race AS race, t2.gender as gender
+  SELECT DISTINCT t1.*, t4.matchmakerRating AS matchmakerRating, t2.name AS name, t2.class AS class, t2.race AS race, t2.gender as gender
   FROM " . $prefix ."arena_team_member AS t1 INNER JOIN characters AS t2 ON t1.guid = t2.guid
   INNER JOIN " . $prefix ."arena_team AS t3 ON t1.arenaTeamId = t3.arenaTeamId
   LEFT JOIN " . $prefix ."character_arena_stats AS t4 ON
@@ -1611,7 +1611,7 @@ Route::get('/arena_team_member/{arenaTeamId}', function($arenaTeamId) {
       WHEN 0 THEN 2
       WHEN 1 THEN 3
       WHEN 2 THEN 5
-    END)
+    END) " . ($season != "" ? "AND t4.season = " . $_GET['season'] . " " : "") . "
   )
   WHERE t1.arenaTeamId = " . $arenaTeamId . " " . $season);
 
